@@ -1,4 +1,4 @@
-XgBoost CNN 
-dataset- cifar10
+## XgBoost CNN 
 
-# https://github.com/jonaac/deep-xgboost-image-classifier/tree/main
+- dataset- cifar10
+- https://github.com/jonaac/deep-xgboost-image-classifier/tree/main
