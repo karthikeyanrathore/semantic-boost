@@ -1,4 +1,4 @@
-## XgBoost CNN 
+## ~XgBoost CNN~ Semantic-boost 
 
 ## Results
 - CNN model accuracy on test dataset - 0.676
