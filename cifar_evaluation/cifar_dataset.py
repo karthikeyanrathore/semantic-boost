@@ -60,7 +60,7 @@ class CIFAR10Data:
         self.trainloader = DataLoader(
             trainset,
             batch_size=self.batch_size,
-            shuffle=True,
+            shuffle=False,
             num_workers=self.num_workers,
         )
 
@@ -91,6 +91,9 @@ class CIFAR10Data:
             shuffle=False,
             num_workers=self.num_workers,
         )
+        print(f"self.trainloader: {len(self.trainloader)}")
+        print(f"self.valloader: {len(self.valloader)}")
+        print(f"self.testloader: {len(self.testloader)}")
         return self.trainloader, self.valloader, self.testloader
 
     def loaders(self):

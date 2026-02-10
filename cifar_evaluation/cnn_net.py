@@ -4,9 +4,9 @@ import time
 import torch
 import torch.nn.functional as F
 from torch import nn, optim
+import matplotlib.pyplot as plt
 
-__all__ = ["Net", "CNNTrainer", "get_default_device"]
-
+__all__ = ["Net", "CNNNetTrainer", "get_default_device"]
 
 def get_default_device():
     if torch.cuda.is_available():
@@ -14,7 +14,6 @@ def get_default_device():
     if hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
         return torch.device("mps")
     return torch.device("cpu")
-
 
 class Net(nn.Module):
     def __init__(self):
@@ -38,31 +37,74 @@ class Net(nn.Module):
         x = F.relu(self.conv3(x))
         x = F.relu(self.bn3(self.conv4(x)))
         x = self.pool(x)
-        self.features = x
         x = torch.flatten(x, 1)
         x = F.relu(self.fc1(x))
+        self.features = x
         x = self.fc2(x)
         return x
 
+def configuration_net(*args, **kwargs):
+    if len(args) > 7:
+        raise TypeError("CNNNetTrainer expected at most 7 positional arguments")
+    keys = [
+        "model",
+        "train_loader",
+        "val_loader",
+        "device",
+        "lr",
+        "momentum",
+        "log_interval",
+    ]
+    net_params = {}
+    net_params["model"] = None
+    net_params["train_loader"] = None
+    net_params["val_loader"] = None
+    net_params["device"] = None
+    net_params["lr"] = 0.001
+    net_params["momentum"] = 0.9
+    net_params["log_interval"] = 200
+    for key, value in zip(keys, args):
+        net_params[key] = value
+    net_params.update(kwargs)
+    if (net_params["model"] is None or net_params["train_loader"] is None or net_params["val_loader"] is None):
+        raise TypeError("CNNNetTrainer requires model, train_loader, and val_loader")
+    return net_params
 
-class CNNTrainer:
-    def __init__(
-        self,
-        model,
-        train_loader,
-        val_loader,
-        device=None,
-        lr=0.001,
-        momentum=0.9,
-        log_interval=200,
-    ):
-        self.device = device or get_default_device()
-        self.model = model.to(self.device)
-        self.train_loader = train_loader
-        self.val_loader = val_loader
+def evaluate_dataset(model_path, testset):
+    print(f"testset: {len(testset)}")
+    device = get_default_device()
+    model = Net()
+    checkpoint = torch.load(model_path, map_location=device)
+    model.load_state_dict(checkpoint)
+    model.to(device)
+    model.eval()
+    loss = nn.CrossEntropyLoss()
+    correct, total_pred = 0.0, 0.0
+    with torch.no_grad():
+        for images, labels in testset:
+            images, labels = images.to(device), labels.to(device) 
+            outputs = model(images)
+            _, predictions = torch.max(outputs, 1)
+            for truth, predicted in zip(labels, predictions):
+                if truth == predicted:
+                    correct += 1.0
+                total_pred += 1.0
+    return correct / total_pred
+
+class CNNNetTrainer:
+    def __init__(self, *args, **kwargs):
+        net_params = configuration_net(*args, **kwargs)
+        self.device = net_params["device"] or get_default_device()
+        self.model = net_params["model"].to(self.device)
+        self.train_loader = net_params["train_loader"]
+        self.val_loader = net_params["val_loader"]
         self.criterion = nn.CrossEntropyLoss()
-        self.optimizer = optim.SGD(self.model.parameters(), lr=lr, momentum=momentum)
-        self.log_interval = log_interval
+        self.optimizer = optim.SGD(
+            self.model.parameters(),
+            lr=net_params["lr"],
+            momentum=net_params["momentum"],
+        )
+        self.log_interval = net_params["log_interval"]
         self.history = {"train_loss": [], "val_loss": []}
 
     def train(self, epochs):
@@ -106,3 +148,16 @@ class CNNTrainer:
     def save(self, path):
         os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
         torch.save(self.model.state_dict(), path)
+
+    def plot_curve(self, out_path="loss_curve.png"):
+        fig, ax = plt.subplots(figsize=(7, 4))
+        ax.plot(self.history["train_loss"], label="trainingloss", color="green")
+        ax.plot(self.history["val_loss"], label="validationloss", color="blue")
+        ax.set_xlabel("Epoch")
+        ax.set_ylabel("Loss")
+        ax.legend()
+        ax.grid(True, alpha=0.3)
+        os.makedirs(os.path.dirname(out_path) or ".", exist_ok=True)
+        fig.tight_layout()
+        fig.savefig(out_path, dpi=200, bbox_inches="tight")
+        plt.close(fig)

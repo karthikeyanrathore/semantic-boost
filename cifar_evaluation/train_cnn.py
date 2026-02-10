@@ -2,7 +2,7 @@ import argparse
 import os
 
 from cifar_evaluation.cifar_dataset import CIFAR10Data
-from cifar_evaluation.cnn_net import CNNTrainer, Net, get_default_device
+from cifar_evaluation.cnn_net import CNNNetTrainer, Net, get_default_device, evaluate_dataset
 
 
 def parse_args():
@@ -42,23 +42,26 @@ def main():
         val_ratio=args.val_ratio,
         seed=args.seed,
     )
-    train_loader, val_loader, _ = data.create_loaders()
-    model = Net()
-    device = get_default_device()
-    trainer = CNNTrainer(
-        model=model,
-        train_loader=train_loader,
-        val_loader=val_loader,
-        device=device,
-        lr=args.learning_rate,
-        momentum=args.momentum,
-        log_interval=args.log_interval,
-    )
-    trainer.train(args.epochs)
-    os.makedirs(os.path.dirname(args.model_path) or ".", exist_ok=True)
-    trainer.save(args.model_path)
-    print("training finished", f"checkpoint saved at {args.model_path}")
-
+    train_loader, val_loader, test_loader = data.create_loaders()
+    if os.getenv("TRAINING"):
+        model = Net()
+        device = get_default_device()
+        cnet = CNNNetTrainer(
+            model=model,
+            train_loader=train_loader,
+            val_loader=val_loader,
+            device=device,
+            lr=args.learning_rate,
+            momentum=args.momentum,
+            log_interval=args.log_interval,
+        )
+        cnet.train(args.epochs)
+        os.makedirs(os.path.dirname(args.model_path) or ".", exist_ok=True)
+        cnet.save(args.model_path)
+        cnet.plot_curve()
+        print("training finished", f"checkpoint saved at {args.model_path}")
+    accuracy_test = evaluate_dataset(args.model_path, test_loader)
+    print(f"Accuracy on test dataset: {accuracy_test}")
 
 if __name__ == "__main__":
     main()

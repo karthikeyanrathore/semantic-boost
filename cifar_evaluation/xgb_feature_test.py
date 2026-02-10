@@ -84,10 +84,7 @@ def main():
     train_features, train_labels = extract_features(train_loader, model, device)
     test_features, test_labels = extract_features(test_loader, model, device)
 
-    print(
-        "Features->",
-        f"train {train_features.shape}, test {test_features.shape}",
-    )
+    print( "Features->", f"train {train_features.shape}, test {test_features.shape}")
 
     print(" -- Traing XGBoost Model from CNN feature extraction --")
     dtrain = xgb.DMatrix(train_features, label=train_labels)
@@ -98,13 +95,8 @@ def main():
     xgb_params["eval_metric"] = "mlogloss"
     xgb_params["max_depth"] = 6
     booster = xgb.train(xgb_params, dtrain, args.num_rounds)
-
-    train_predictions = booster.predict(dtrain)
     test_predictions = booster.predict(dtest)
-    train_accuracy = float(np.mean(train_predictions == train_labels)) * 100
     test_accuracy = float(np.mean(test_predictions == test_labels)) * 100
-
-    print(f"XGB on train features accuracy: {train_accuracy:.2f}%")
     print(f"XGB on test features accuracy : {test_accuracy:.2f}%")
 
 
