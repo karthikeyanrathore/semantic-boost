@@ -12,6 +12,8 @@
 - [ ] instead of custom CNN model, apply VGG/resnet architecture on dataset and then check how the xgboost model performance is on those conv features.
 - [ ] apart from xgboost, try out SVM, KNN.
 - [ ] include CLIP classification
+- [ ] create your own custom dataset and test the meta-model on it. First start with on 3-4 classes.
+- [ ] Answer the "why?" why the accuracy gets boosted after training Xgboost model on CNN features
 
 ## How to train CNN model - miniforge conda env?
 ```bash
