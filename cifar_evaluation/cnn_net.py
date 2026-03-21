@@ -6,7 +6,7 @@ import torch.nn.functional as F
 from torch import nn, optim
 import matplotlib.pyplot as plt
 
-__all__ = ["Net", "CNNNetTrainer", "get_default_device"]
+__all__ = ["Net", "CNNNetTrainer", "get_default_device", "compute_model_accuracy"]
 
 def get_default_device():
     if torch.cuda.is_available():
@@ -43,10 +43,10 @@ class Net(nn.Module):
         x = self.fc2(x)
         return x
 
-def configuration_net(*args, **kwargs):
+def build_trainer_config(*args, **kwargs):
     if len(args) > 7:
         raise TypeError("CNNNetTrainer expected at most 7 positional arguments")
-    keys = [
+    param_keys = [
         "model",
         "train_loader",
         "val_loader",
@@ -55,23 +55,23 @@ def configuration_net(*args, **kwargs):
         "momentum",
         "log_interval",
     ]
-    net_params = {}
-    net_params["model"] = None
-    net_params["train_loader"] = None
-    net_params["val_loader"] = None
-    net_params["device"] = None
-    net_params["lr"] = 0.001
-    net_params["momentum"] = 0.9
-    net_params["log_interval"] = 200
-    for key, value in zip(keys, args):
-        net_params[key] = value
-    net_params.update(kwargs)
-    if (net_params["model"] is None or net_params["train_loader"] is None or net_params["val_loader"] is None):
+    trainer_config = {}
+    trainer_config["model"] = None
+    trainer_config["train_loader"] = None
+    trainer_config["val_loader"] = None
+    trainer_config["device"] = None
+    trainer_config["lr"] = 0.001
+    trainer_config["momentum"] = 0.9
+    trainer_config["log_interval"] = 200
+    for key, value in zip(param_keys, args):
+        trainer_config[key] = value
+    trainer_config.update(kwargs)
+    if (trainer_config["model"] is None or trainer_config["train_loader"] is None or trainer_config["val_loader"] is None):
         raise TypeError("CNNNetTrainer requires model, train_loader, and val_loader")
-    return net_params
+    return trainer_config
 
-def evaluate_dataset(model_path, testset):
-    print(f"testset: {len(testset)}")
+def compute_model_accuracy(model_path, test_loader):
+    print(f"test_loader: {len(test_loader)} batches")
     device = get_default_device()
     model = Net()
     checkpoint = torch.load(model_path, map_location=device)
@@ -79,32 +79,32 @@ def evaluate_dataset(model_path, testset):
     model.to(device)
     model.eval()
     loss = nn.CrossEntropyLoss()
-    correct, total_pred = 0.0, 0.0
+    num_correct, num_total = 0.0, 0.0
     with torch.no_grad():
-        for images, labels in testset:
+        for images, labels in test_loader:
             images, labels = images.to(device), labels.to(device) 
             outputs = model(images)
             _, predictions = torch.max(outputs, 1)
             for truth, predicted in zip(labels, predictions):
                 if truth == predicted:
-                    correct += 1.0
-                total_pred += 1.0
-    return correct / total_pred
+                    num_correct += 1.0
+                num_total += 1.0
+    return num_correct / num_total
 
 class CNNNetTrainer:
     def __init__(self, *args, **kwargs):
-        net_params = configuration_net(*args, **kwargs)
-        self.device = net_params["device"] or get_default_device()
-        self.model = net_params["model"].to(self.device)
-        self.train_loader = net_params["train_loader"]
-        self.val_loader = net_params["val_loader"]
+        trainer_config = build_trainer_config(*args, **kwargs)
+        self.device = trainer_config["device"] or get_default_device()
+        self.model = trainer_config["model"].to(self.device)
+        self.train_loader = trainer_config["train_loader"]
+        self.val_loader = trainer_config["val_loader"]
         self.criterion = nn.CrossEntropyLoss()
         self.optimizer = optim.SGD(
             self.model.parameters(),
-            lr=net_params["lr"],
-            momentum=net_params["momentum"],
+            lr=trainer_config["lr"],
+            momentum=trainer_config["momentum"],
         )
-        self.log_interval = net_params["log_interval"]
+        self.log_interval = trainer_config["log_interval"]
         self.history = {"train_loss": [], "val_loss": []}
 
     def train(self, epochs):
@@ -121,8 +121,8 @@ class CNNNetTrainer:
                 self.optimizer.step()
                 total_loss += loss.item()
                 if self.log_interval and batch_idx % self.log_interval == 0:
-                    avg = total_loss / batch_idx
-                    print(f"epoch {epoch} step {batch_idx}: running loss {avg:.3f}")
+                    avg_batch_loss = total_loss / batch_idx
+                    print(f"epoch {epoch} step {batch_idx}: running loss {avg_batch_loss:.3f}")
             train_loss = total_loss / len(self.train_loader)
             val_loss = self._evaluate()
             self.history["train_loss"].append(train_loss)
