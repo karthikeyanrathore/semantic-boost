@@ -86,18 +86,18 @@ def main():
 
     print( "Features->", f"train {train_features.shape}, test {test_features.shape}")
 
-    print(" -- Traing XGBoost Model from CNN feature extraction --")
-    dtrain = xgb.DMatrix(train_features, label=train_labels)
-    dtest = xgb.DMatrix(test_features, label=test_labels)
-    xgb_params = {}
-    xgb_params["objective"] = "multi:softmax"
-    xgb_params["num_class"] = 10
-    xgb_params["eval_metric"] = "mlogloss"
-    xgb_params["max_depth"] = 6
-    booster = xgb.train(xgb_params, dtrain, args.num_rounds)
-    test_predictions = booster.predict(dtest)
-    test_accuracy = float(np.mean(test_predictions == test_labels)) * 100
-    print(f"XGB on test features accuracy : {test_accuracy:.2f}%")
+    print(" -- Training XGBoost Model from CNN feature extraction --")
+    train_dmatrix = xgb.DMatrix(train_features, label=train_labels)
+    test_dmatrix = xgb.DMatrix(test_features, label=test_labels)
+    xgboost_params = {}
+    xgboost_params["objective"] = "multi:softmax"
+    xgboost_params["num_class"] = 10
+    xgboost_params["eval_metric"] = "mlogloss"
+    xgboost_params["max_depth"] = 6
+    xgboost_model = xgb.train(xgboost_params, train_dmatrix, args.num_rounds)
+    test_predictions = xgboost_model.predict(test_dmatrix)
+    test_accuracy_percent = float(np.mean(test_predictions == test_labels)) * 100
+    print(f"XGB on test features accuracy : {test_accuracy_percent:.2f}%")
 
 
 if __name__ == "__main__":

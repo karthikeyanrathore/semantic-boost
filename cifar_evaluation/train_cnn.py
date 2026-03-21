@@ -2,7 +2,7 @@ import argparse
 import os
 
 from cifar_evaluation.cifar_dataset import CIFAR10Data
-from cifar_evaluation.cnn_net import CNNNetTrainer, Net, get_default_device, evaluate_dataset
+from cifar_evaluation.cnn_net import CNNNetTrainer, Net, get_default_device, compute_model_accuracy
 
 
 def parse_args():
@@ -46,7 +46,7 @@ def main():
     if os.getenv("TRAINING"):
         model = Net()
         device = get_default_device()
-        cnet = CNNNetTrainer(
+        cnn_trainer = CNNNetTrainer(
             model=model,
             train_loader=train_loader,
             val_loader=val_loader,
@@ -55,13 +55,13 @@ def main():
             momentum=args.momentum,
             log_interval=args.log_interval,
         )
-        cnet.train(args.epochs)
+        cnn_trainer.train(args.epochs)
         os.makedirs(os.path.dirname(args.model_path) or ".", exist_ok=True)
-        cnet.save(args.model_path)
-        cnet.plot_curve()
+        cnn_trainer.save(args.model_path)
+        cnn_trainer.plot_curve()
         print("training finished", f"checkpoint saved at {args.model_path}")
-    accuracy_test = evaluate_dataset(args.model_path, test_loader)
-    print(f"Accuracy on test dataset: {accuracy_test}")
+    test_accuracy = compute_model_accuracy(args.model_path, test_loader)
+    print(f"Accuracy on test dataset: {test_accuracy}")
 
 if __name__ == "__main__":
     main()

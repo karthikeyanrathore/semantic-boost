@@ -70,23 +70,23 @@ class CIFAR10Data:
             download=True,
             transform=self.transform,
         )
-        total_test = len(testset)
-        val_size = int(total_test * self.val_ratio)
-        val_size = max(1, min(total_test - 1, val_size))
-        test_size = total_test - val_size
-        val_subset, test_subset = random_split(
+        total_test_samples = len(testset)
+        num_val_samples = int(total_test_samples * self.val_ratio)
+        num_val_samples = max(1, min(total_test_samples - 1, num_val_samples))
+        num_test_samples = total_test_samples - num_val_samples
+        val_dataset_split, test_dataset_split = random_split(
             testset,
-            [val_size, test_size],
+            [num_val_samples, num_test_samples],
             generator=torch.Generator().manual_seed(self.seed),
         )
         self.valloader = DataLoader(
-            val_subset,
+            val_dataset_split,
             batch_size=self.batch_size,
             shuffle=False,
             num_workers=self.num_workers,
         )
         self.testloader = DataLoader(
-            test_subset,
+            test_dataset_split,
             batch_size=self.batch_size,
             shuffle=False,
             num_workers=self.num_workers,
